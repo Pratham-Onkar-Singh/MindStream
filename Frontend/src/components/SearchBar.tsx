@@ -4,6 +4,7 @@ interface SearchBarProps {
     onSearch: (query: string) => void;
     onFilterChange?: (filters: SearchFilters) => void;
     placeholder?: string;
+    collectionScope?: string | null; // Collection ID if search is scoped to a collection
 }
 
 export interface SearchFilters {
@@ -11,7 +12,7 @@ export interface SearchFilters {
     sortBy: string;
 }
 
-export const SearchBar = ({ onSearch, onFilterChange, placeholder = "Search your brain..." }: SearchBarProps) => {
+export const SearchBar = ({ onSearch, onFilterChange, placeholder = "Search your brain...", collectionScope }: SearchBarProps) => {
     const [query, setQuery] = useState('');
     const [filters, setFilters] = useState<SearchFilters>({
         type: 'all',
@@ -131,13 +132,25 @@ export const SearchBar = ({ onSearch, onFilterChange, placeholder = "Search your
 
             {/* Active Search Indicator */}
             {query && (
-                <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>
-                        Searching for: <span className="text-white font-medium">"{query}"</span>
-                    </span>
+                <div className="mt-3 flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>
+                            Searching for: <span className="text-white font-medium">"{query}"</span>
+                        </span>
+                    </div>
+                    {collectionScope && (
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                            </svg>
+                            <span>
+                                Searching within current collection
+                            </span>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

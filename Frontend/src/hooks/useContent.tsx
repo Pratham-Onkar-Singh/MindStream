@@ -9,6 +9,7 @@ interface Content {
     link?: string;
     tags?: string[];
     userId: string;
+    collection?: string;
 }
 
 export const useContent = () => {

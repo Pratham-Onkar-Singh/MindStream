@@ -3,9 +3,16 @@ import { CloseIcon } from "../icons/CloseIcon"
 import { Button } from "./Button"
 import { Input } from "./Input"
 import { Textarea } from "./Textarea"
-import { contentAPI, uploadAPI } from "../api"
+import { contentAPI, uploadAPI, collectionAPI } from "../api"
 
 type UploadMode = 'url' | 'file';
+
+interface Collection {
+    _id: string;
+    name: string;
+    icon: string;
+    color: string;
+}
 
 interface CreateContentModalProps {
     open: boolean;
@@ -18,10 +25,12 @@ interface CreateContentModalProps {
         description?: string;
         link?: string;
         type?: string;
+        collection?: string;
     };
+    defaultCollectionId?: string | null;
 }
 
-export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, initialData }: CreateContentModalProps) => {
+export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, initialData, defaultCollectionId }: CreateContentModalProps) => {
     const titleRef = useRef<HTMLInputElement>(null);
     const linkRef = useRef<HTMLInputElement>(null);
     const descriptionRef = useRef<HTMLTextAreaElement>(null);
@@ -29,6 +38,8 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
 
     const [uploadMode, setUploadMode] = useState<UploadMode>(initialData?.type === 'file' ? 'file' : 'url');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [collections, setCollections] = useState<Collection[]>([]);
+    const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
     const [errorMessage, setErrorMessage] = useState("");
     const [loading, setLoading] = useState(false);
     
@@ -39,22 +50,46 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
         link: ""
     });
 
-    // Set initial values when modal opens in edit mode
+    // Fetch collections when modal opens
     useEffect(() => {
-        if (open && editMode && initialData) {
-            const title = initialData.title || "";
-            const description = initialData.description || "";
-            const link = initialData.link || "";
-            
-            setFormValues({ title, description, link });
-            
-            if (titleRef.current) titleRef.current.value = title;
-            if (descriptionRef.current) descriptionRef.current.value = description;
-            if (linkRef.current && initialData.type !== 'file') linkRef.current.value = link;
+        if (open) {
+            loadCollections();
+        }
+    }, [open]);
+
+    const loadCollections = async () => {
+        try {
+            const response = await collectionAPI.getAll();
+            setCollections(response.collections || []);
+        } catch (error) {
+            console.error('Failed to load collections:', error);
+        }
+    };
+
+    // Set initial values when modal opens
+    useEffect(() => {
+        if (open) {
+            if (editMode && initialData) {
+                // Edit mode: use initialData
+                const title = initialData.title || "";
+                const description = initialData.description || "";
+                const link = initialData.link || "";
+                
+                setFormValues({ title, description, link });
+                setSelectedCollectionId(initialData.collection || '');
+                
+                if (titleRef.current) titleRef.current.value = title;
+                if (descriptionRef.current) descriptionRef.current.value = description;
+                if (linkRef.current && initialData.type !== 'file') linkRef.current.value = link;
+            } else if (defaultCollectionId) {
+                // Create mode: use defaultCollectionId if provided
+                setSelectedCollectionId(defaultCollectionId);
+            }
         }
         // Clear values when modal closes
         if (!open) {
             setFormValues({ title: "", description: "", link: "" });
+            setSelectedCollectionId('');
             if (titleRef.current) titleRef.current.value = "";
             if (linkRef.current) linkRef.current.value = "";
             if (descriptionRef.current) descriptionRef.current.value = "";
@@ -63,7 +98,7 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
             setErrorMessage("");
             setUploadMode('url'); // Reset to default mode
         }
-    }, [open, editMode, initialData]);
+    }, [open, editMode, initialData, defaultCollectionId]);
 
     // Preserve linkRef value when switching back to URL mode
     useEffect(() => {
@@ -102,37 +137,26 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
                     setErrorMessage("Link is required!");
                     return;
                 }
-            } else {
-                // File mode - require a file to be selected for update
-                if (!selectedFile) {
-                    setErrorMessage("Please select a file to upload!");
-                    return;
-                }
             }
+            // Note: For file type content, we only allow updating title, description, and collection
+            // To change the file itself, user needs to delete and create new content
 
             setLoading(true);
             setErrorMessage("");
 
             try {
-                // Note: You'll need to implement an update API endpoint
-                // For now, we'll delete and recreate
-                await contentAPI.delete(initialData.id);
-                
+                const updateData: any = {
+                    title,
+                    description: description || undefined,
+                    collection: selectedCollectionId || null
+                };
+
+                // Only update link if it's a link type content
                 if (uploadMode === 'url') {
-                    const link = linkRef.current?.value;
-                    await contentAPI.create({ 
-                        title, 
-                        type: "link", 
-                        link: link || undefined, 
-                        description: description || undefined 
-                    });
-                } else {
-                    const formData = new FormData();
-                    formData.append('file', selectedFile!); // Non-null assertion safe here due to validation above
-                    formData.append('title', title);
-                    if (description) formData.append('description', description);
-                    await uploadAPI.uploadFile(formData);
+                    updateData.link = linkRef.current?.value;
                 }
+
+                await contentAPI.update(initialData.id, updateData);
 
                 // Clear inputs
                 if (titleRef.current) titleRef.current.value = "";
@@ -177,7 +201,8 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
                     title, 
                     type: "link", 
                     link: link || undefined, 
-                    description: description || undefined 
+                    description: description || undefined,
+                    collection: selectedCollectionId || undefined
                 });
             } else {
                 // Upload file
@@ -185,6 +210,7 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
                 formData.append('file', selectedFile!);
                 formData.append('title', title);
                 if (description) formData.append('description', description);
+                if (selectedCollectionId) formData.append('collection', selectedCollectionId);
 
                 await uploadAPI.uploadFile(formData);
             }
@@ -266,6 +292,25 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
                                 rows={3}
                                 onChange={(e) => setFormValues(prev => ({ ...prev, description: e.target.value }))}
                             />
+                        </div>
+
+                        {/* Collection Selector */}
+                        <div className="w-full">
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                                Collection (optional)
+                            </label>
+                            <select 
+                                value={selectedCollectionId}
+                                onChange={(e) => setSelectedCollectionId(e.target.value)}
+                                className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 border border-gray-700 focus:border-gray-600 focus:outline-none"
+                            >
+                                <option value="">No Collection</option>
+                                {collections.map(c => (
+                                    <option key={c._id} value={c._id}>
+                                        {c.icon} {c.name}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
 
                         {uploadMode === 'url' ? (

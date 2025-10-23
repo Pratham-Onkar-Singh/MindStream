@@ -91,13 +91,14 @@ export const createSingleFile = async (req: Request, res: Response) => {
         console.log('File record created:', file._id);
 
         // Create content entry for the uploaded file
-        const { title, description } = req.body;
+        const { title, description, collection } = req.body;
         const content = await Content.create({
             title: title || req.file.originalname,
             type: "file",
             link: viewableUrl,
             description: description || undefined,
             tags: [],
+            collection: collection || undefined,
             userId: req.userId
         });
 

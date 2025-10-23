@@ -10,6 +10,15 @@ interface ViewContentModalProps {
 }
 
 export const ViewContentModal = ({ open, onClose, title, description, type, link }: ViewContentModalProps) => {
+  // Ensure URL has proper protocol
+  const getValidUrl = (url: string | undefined) => {
+    if (!url) return undefined;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
+  };
+
   const getTypeIcon = () => {
     if (type === 'file') {
       return (
@@ -159,7 +168,7 @@ export const ViewContentModal = ({ open, onClose, title, description, type, link
                 {type === 'file' ? 'Direct Link' : 'Source Link'}
               </h3>
               <a 
-                href={link}
+                href={getValidUrl(link)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2 group break-all"

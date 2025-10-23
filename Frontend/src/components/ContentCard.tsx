@@ -16,6 +16,15 @@ interface ContentCardProps {
 export const ContentCard = ({ id, title, description, type, link, onDelete, onEdit, onView, onSave }: ContentCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
 
+  // Ensure URL has proper protocol
+  const getValidUrl = (url: string | undefined) => {
+    if (!url) return undefined;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    return `https://${url}`;
+  };
+
   const getTypeIcon = () => {
     if (type === 'file') {
       return (
@@ -119,7 +128,7 @@ export const ContentCard = ({ id, title, description, type, link, onDelete, onEd
         {link && (
           <div className="pt-3 border-t border-gray-800 mt-auto">
             <a 
-              href={link}
+              href={getValidUrl(link)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1 group/link"

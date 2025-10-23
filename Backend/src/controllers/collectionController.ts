@@ -1,6 +1,6 @@
-import type { Request, Response } from "express";
+import { json, type Request, type Response } from "express";
 import { Collection } from "../models/Collection.js";
-import { Content } from "../db.js";
+import { Content } from "../models/Content.js";
 
 // getting all collections of a User
 export const getUserCollections = async (req: Request, res: Response) => {
@@ -184,4 +184,87 @@ export const deleteCollection = async (req: Request, res: Response) => {
         });
     }
 }
+
+// getting all content in a collection
+export const getCollectionContent = async (req: Request, res: Response) => {
+    try {
+        const { collectionId } = req.params;
+        const userId = req.userId;
+
+        const collection = await Collection.findOne({
+            _id: collectionId,
+            userId
+        })
+
+        if(!collection) {
+            return res.status(404).json({
+                message: 'Collection not found'
+            })
+        }
+
+        const contents = await Content.find({
+            collection: collectionId,
+            userId
+        })
+            .sort({ createdAt: -1 })
+
+        res.json({
+            success: true,
+            collection,
+            contents
+        })
+    } catch (error) {
+        console.error('Error gettign collection content:', error);
+        res.status(500).json({
+            message: 'Failed to fetch collection content',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        })
+    }
+}
+
+// move all content to collection
+export const moveContentToCollection = async (req: Request, res: Response) => {
+    try {
+        const { contentId } = req.params;
+        const { collectionId } = req.body;
+        const userId = req.userId;
+
+        const content = await Content.findOne({
+            _id: contentId,
+            userId
+        });
+
+        if(!content) {
+            return res.status(404).json({
+                message: "Content not found"
+            });
+        }
+
+        if(collectionId) {
+            const collection = await Collection.findOne({ collectionId, userId });
+            
+            if(!collection) {
+                return res.status(404).json({
+                    message: 'Collection not found'
+                });
+            }
+        }
+
+        content.collection = collectionId || undefined;
+        await content.save();
+
+        res.json({
+            succcess: true,
+            message: 'Content moved successfully',
+            content
+        })
+    } catch (error) {
+        console.error('Error moving content:', error);
+        res.status(500).json({
+            message: 'Failed to move content',
+            error: error instanceof Error ? error.message : 'Unknown error'
+        })
+    }
+}
+
 

@@ -51,7 +51,7 @@ export const authAPI = {
 
 // Content API
 export const contentAPI = {
-    create: async (data: { title: string; type: string; link?: string; description?: string }) => {
+    create: async (data: { title: string; type: string; link?: string; description?: string; collection?: string }) => {
         const response = await api.post('/api/v1/content', data);
         return response.data;
     },
@@ -64,6 +64,19 @@ export const contentAPI = {
     delete: async (contentId: string) => {
         const response = await api.delete('/api/v1/content', {
             data: { contentId }
+        });
+        return response.data;
+    },
+
+    update: async (contentId: string, data: {
+        title?: string;
+        description?: string;
+        link?: string;
+        collection?: string | null;
+    }) => {
+        const response = await api.put('/api/v1/content', {
+            contentId,
+            ...data
         });
         return response.data;
     },
@@ -114,11 +127,13 @@ export const shareAPI = {
 export const searchAPI = {
     search: async (query: string, filters? : {
         type?: string;
-        sortBy?: string
+        sortBy?: string;
+        collection?: string;
     }) => {
         const params = new URLSearchParams({ query });
         if (filters?.type) params.append('type', filters.type);
         if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+        if (filters?.collection) params.append('collection', filters.collection);
         
         const response = await api.get(`/api/v1/search?${params.toString()}`);
         return response.data;
@@ -142,5 +157,45 @@ export const userAPI = {
         return response.data;
     },
 };
+
+// Collection API
+export const collectionAPI = {
+    getAll: async () => {
+        const response = await api.get('/api/v1/collections');
+        return response.data;
+    },
+
+    create: async (data: {
+        name: string,
+        description?: string,
+        icon?: string,
+        color?: string,
+        parentCollection?: string
+    }) => {
+        const response = await api.post('/api/v1/collections', data);
+        return response.data;
+    },
+
+    update: async (collectionId: string, data: {
+        name?: string,
+        description?: string,
+        icon?: string,
+        color?: string
+    }) => {
+        const response = await api.post(`/api/v1/collections/${collectionId}`, data);
+        return response.data;
+    },
+
+    delete: async (collectionId: string) => {
+        const response = await api.delete(`/api/v1/collections/${collectionId}`)
+        return response.data
+    },
+
+    getContent: async (collectionId: string) => {
+        const response = await api.get(`/api/v1/collections/${collectionId}/contents`)
+        return response.data;
+    }
+
+}
 
 export default api;

@@ -5,7 +5,7 @@ import shareRoutes from "./shareRoutes.js";
 import uploadRoutes from "./uploadRoutes.js"
 import searchRoutes from "./searchRoutes.js"
 import userRoutes from "./userRoutes.js"
-
+import collectionRoutes from "./collectionRoutes.js"
 
 const router = Router();
 
@@ -16,5 +16,6 @@ router.use('/v1', shareRoutes);
 router.use('/v1', uploadRoutes);
 router.use('/v1', searchRoutes)
 router.use('/v1/user', userRoutes)
+router.use('/v1', collectionRoutes)
 
 export default router;

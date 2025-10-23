@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react"
 import { Button } from "../components/Button"
 import { ContentCard } from "../components/ContentCard"
 import { CreateContentModal } from "../components/CreateContentModal"
+import { CreateCollectionModal } from "../components/CreateCollectionModal"
 import { ViewContentModal } from "../components/ViewContentModal"
 import { SearchBar } from "../components/SearchBar"
 import type { SearchFilters } from "../components/SearchBar"
@@ -16,6 +17,7 @@ export function Dashboard() {
   const location = useLocation();
   
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createCollectionModalOpen, setCreateCollectionModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedContent, setSelectedContent] = useState<{
@@ -24,7 +26,11 @@ export function Dashboard() {
     description?: string;
     type?: string;
     link?: string;
+    collection?: string;
   } | undefined>(undefined);
+
+  // Collection state
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,10 +45,17 @@ export function Dashboard() {
   // Sidebar filter state
   const [sidebarFilter, setSidebarFilter] = useState<'all' | 'link' | 'file'>('all');
   
-  // Check if filter was passed via navigation state
+  // Check if filter or collectionId was passed via navigation state
   useEffect(() => {
     if (location.state?.filter) {
       setSidebarFilter(location.state.filter);
+      // Clear the state so it doesn't persist on refresh
+      window.history.replaceState({}, document.title);
+    }
+    if (location.state?.collectionId) {
+      setSelectedCollectionId(location.state.collectionId);
+      setSidebarFilter('all'); // Reset type filter when selecting collection
+      setIsSearching(false); // Exit search mode
       // Clear the state so it doesn't persist on refresh
       window.history.replaceState({}, document.title);
     }
@@ -103,7 +116,8 @@ export function Dashboard() {
         title: content.title,
         description: content.description,
         type: content.type,
-        link: content.link
+        link: content.link,
+        collection: content.collection
       });
       setEditModalOpen(true);
     }
@@ -126,7 +140,8 @@ export function Dashboard() {
     try {
       const response = await searchAPI.search(query, {
         type: searchFilters.type !== 'all' ? searchFilters.type : undefined,
-        sortBy: searchFilters.sortBy
+        sortBy: searchFilters.sortBy,
+        collection: selectedCollectionId || undefined // Add collection filter
       });
       setSearchResults(response.contents || []);
     } catch (error) {
@@ -136,7 +151,7 @@ export function Dashboard() {
     } finally {
       setSearchLoading(false);
     }
-  }, [searchFilters]);
+  }, [searchFilters, selectedCollectionId]);
 
   // Filter change handler
   const handleFilterChange = useCallback((filters: SearchFilters) => {
@@ -150,6 +165,13 @@ export function Dashboard() {
     }
   }, [searchFilters]);
 
+  // Re-search when selected collection changes (if actively searching)
+  useEffect(() => {
+    if (searchQuery.trim() && isSearching) {
+      handleSearch(searchQuery);
+    }
+  }, [selectedCollectionId]);
+
   // Sidebar filter handler
   const handleSidebarFilter = useCallback((filterType: 'all' | 'link' | 'file') => {
     setSidebarFilter(filterType);
@@ -162,9 +184,19 @@ export function Dashboard() {
   // Determine which content to display
   let displayedContents = isSearching ? searchResults : contents;
   
+  // Apply collection filter first
+  if (!isSearching && selectedCollectionId) {
+    displayedContents = contents.filter(content => {
+      // Convert both to strings for comparison in case one is ObjectId
+      const contentCollection = content.collection?.toString();
+      const selectedCollection = selectedCollectionId?.toString();
+      return contentCollection === selectedCollection;
+    });
+  }
+  
   // Apply sidebar filter if not searching
   if (!isSearching && sidebarFilter !== 'all') {
-    displayedContents = contents.filter(content => content.type === sidebarFilter);
+    displayedContents = displayedContents.filter(content => content.type === sidebarFilter);
   }
   
   return (
@@ -174,12 +206,31 @@ export function Dashboard() {
           <Sidebar 
             onFilterChange={handleSidebarFilter}
             activeFilter={sidebarFilter}
+            onCollectionSelect={(collectionId) => {
+              setSelectedCollectionId(collectionId);
+              setSidebarFilter('all'); // Reset type filter when selecting collection
+              // Don't exit search mode - let the useEffect re-trigger search with new collection
+            }}
+            selectedCollectionId={selectedCollectionId}
+            onCreateCollectionClick={() => setCreateCollectionModalOpen(true)}
           />
         </div>
         <CreateContentModal 
           open={createModalOpen} 
           onClose={() => {setCreateModalOpen(false);}} 
           onSubmit={() => {setCreateModalOpen(false); refresh();}}
+          defaultCollectionId={selectedCollectionId}
+        />
+        <CreateCollectionModal
+          open={createCollectionModalOpen}
+          onClose={() => setCreateCollectionModalOpen(false)}
+          onSuccess={() => {
+            // Refresh the collection sidebar
+            if ((window as any).refreshCollections) {
+              (window as any).refreshCollections();
+            }
+            refresh();
+          }}
         />
         <CreateContentModal 
           open={editModalOpen} 
@@ -224,6 +275,7 @@ export function Dashboard() {
               onSearch={handleSearch}
               onFilterChange={handleFilterChange}
               placeholder="Search your brain..."
+              collectionScope={selectedCollectionId}
             />
           </div>
 

@@ -72,6 +72,10 @@ export function Dashboard() {
       try {
         await contentAPI.delete(id);
         refresh();
+        // Refresh collection counts
+        if ((window as any).refreshCollections) {
+          (window as any).refreshCollections();
+        }
       } catch (err) {
         alert('Failed to delete content');
       }
@@ -218,7 +222,14 @@ export function Dashboard() {
         <CreateContentModal 
           open={createModalOpen} 
           onClose={() => {setCreateModalOpen(false);}} 
-          onSubmit={() => {setCreateModalOpen(false); refresh();}}
+          onSubmit={() => {
+            setCreateModalOpen(false); 
+            refresh();
+            // Refresh collection counts
+            if ((window as any).refreshCollections) {
+              (window as any).refreshCollections();
+            }
+          }}
           defaultCollectionId={selectedCollectionId}
         />
         <CreateCollectionModal
@@ -235,7 +246,15 @@ export function Dashboard() {
         <CreateContentModal 
           open={editModalOpen} 
           onClose={() => {setEditModalOpen(false); setSelectedContent(undefined);}} 
-          onSubmit={() => {setEditModalOpen(false); setSelectedContent(undefined); refresh();}}
+          onSubmit={() => {
+            setEditModalOpen(false); 
+            setSelectedContent(undefined); 
+            refresh();
+            // Refresh collection counts
+            if ((window as any).refreshCollections) {
+              (window as any).refreshCollections();
+            }
+          }}
           editMode={true}
           initialData={selectedContent}
         />

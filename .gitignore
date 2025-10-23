@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+.env.local
+.env*.local
+
+# Build outputs
+dist/
+build/
+
+# Logs
+*.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Database
+*.db
+*.sqlite
+data/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Temporary markdown files (exclude personal notes)
+NOTES.md
+TODO.md
+SCRATCH.md
+TEMP*.md
+DRAFT*.md
+WIP*.md
+.notes/
+
+# Security check scripts (personal use only)
+security-check.sh
+
+# Development documentation files
+PROJECT_ROADMAP.md
+BRAIN_LINK_FEATURE.md
+PROFILE_IMPLEMENTATION.md
+FRONTEND_API_UPDATE.md
+RESTRUCTURE_README.md
+
+# Documentation (auto-generated only)
+docs/api/generated/

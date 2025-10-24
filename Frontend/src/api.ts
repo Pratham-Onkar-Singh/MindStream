@@ -186,8 +186,8 @@ export const collectionAPI = {
         return response.data;
     },
 
-    delete: async (collectionId: string) => {
-        const response = await api.delete(`/api/v1/collections/${collectionId}`)
+    delete: async (collectionId: string, deleteAll: boolean = false) => {
+        const response = await api.delete(`/api/v1/collections/${collectionId}?deleteAll=${deleteAll}`)
         return response.data
     },
 

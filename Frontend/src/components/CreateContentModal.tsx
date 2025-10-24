@@ -1,18 +1,13 @@
-import { useRef, useState, useEffect } from "react"
+import { useRef, useState, useEffect, useMemo } from "react"
 import { CloseIcon } from "../icons/CloseIcon"
 import { Button } from "./Button"
 import { Input } from "./Input"
 import { Textarea } from "./Textarea"
 import { contentAPI, uploadAPI, collectionAPI } from "../api"
+import type { CollectionSummary } from "../types/collection"
+import { buildCollectionTree, flattenCollectionTree } from "../utils/collectionTree"
 
 type UploadMode = 'url' | 'file';
-
-interface Collection {
-    _id: string;
-    name: string;
-    icon: string;
-    color: string;
-}
 
 interface CreateContentModalProps {
     open: boolean;
@@ -38,7 +33,7 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
 
     const [uploadMode, setUploadMode] = useState<UploadMode>(initialData?.type === 'file' ? 'file' : 'url');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
-    const [collections, setCollections] = useState<Collection[]>([]);
+    const [collections, setCollections] = useState<CollectionSummary[]>([]);
     const [selectedCollectionId, setSelectedCollectionId] = useState<string>('');
     const [errorMessage, setErrorMessage] = useState("");
     const [loading, setLoading] = useState(false);
@@ -49,6 +44,10 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
         description: "",
         link: ""
     });
+
+    // Build tree for hierarchical display
+    const collectionTree = useMemo(() => buildCollectionTree(collections), [collections]);
+    const flattenedTree = useMemo(() => flattenCollectionTree(collectionTree), [collectionTree]);
 
     // Fetch collections when modal opens
     useEffect(() => {
@@ -305,11 +304,15 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
                                 className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 border border-gray-700 focus:border-gray-600 focus:outline-none"
                             >
                                 <option value="">No Collection</option>
-                                {collections.map(c => (
-                                    <option key={c._id} value={c._id}>
-                                        {c.icon} {c.name}
-                                    </option>
-                                ))}
+                                {flattenedTree.map((node) => {
+                                    const indent = '  '.repeat(node.depth);
+                                    const prefix = node.depth > 0 ? `${indent}↳ ` : '';
+                                    return (
+                                        <option key={node._id} value={node._id}>
+                                            {prefix}{node.icon} {node.name}
+                                        </option>
+                                    );
+                                })}
                             </select>
                         </div>
 

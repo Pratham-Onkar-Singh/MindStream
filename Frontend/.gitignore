@@ -92,6 +92,10 @@ tmp/
 temp/
 *.tmp
 
+# Temporary text files
+text.txt
+*.txt
+
 # Vercel
 .vercel
 

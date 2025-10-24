@@ -1,6 +1,7 @@
 import { useRef, useState } from "react"
 import { Button } from "../components/Button"
 import { Input } from "../components/Input"
+import { PasswordInput } from "../components/PasswordInput"
 import { Logo } from "../icons/Logo"
 import { useNavigate } from "react-router-dom"
 import { authAPI } from "../api"
@@ -23,6 +24,19 @@ export const Signup = () => {
 
         if (!name || !username || !email || !password) {
             setError("Please fill in all fields");
+            return;
+        }
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            setError("Please enter a valid email address");
+            return;
+        }
+
+        // Password length validation
+        if (password.length < 6) {
+            setError("Password must be at least 6 characters long");
             return;
         }
 
@@ -64,7 +78,7 @@ export const Signup = () => {
                     <Input placeholder="Username" reference={usernameRef} className="w-full"/>
                 </div>
                 <div>
-                    <Input placeholder="Password" reference={passwordRef} className="w-full"/>
+                    <PasswordInput placeholder="Password" ref={passwordRef} className="w-full"/>
                 </div>
                 <Button 
                     variant="primary" 

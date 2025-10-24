@@ -18,8 +18,11 @@ export const getUserCollections = async (req: Request, res: Response) => {
                     collection: collection._id
                 });
 
+                const plain = collection.toObject();
+
                 return {
-                    ...collection.toObject(),
+                    ...plain,
+                    parentCollection: plain.parentCollection || null,
                     contentCount
                 };
             })
@@ -131,7 +134,7 @@ export const updateCollection = async (req: Request, res: Response) => {
 export const deleteCollection = async (req: Request, res: Response) => {
     try {
         const { collectionId } = req.params;
-        const { deleteContent = false } = req.query; 
+        const { deleteAll = 'false' } = req.query; 
         const userId = req.userId;
 
         const collection = await Collection.findOne({
@@ -151,30 +154,66 @@ export const deleteCollection = async (req: Request, res: Response) => {
             })
         }
 
-        if(deleteContent) {
-            console.log(`Deleting collection ${collection.name} and all its content`);
+        if(deleteAll === 'true') {
+            // Delete all: collection + all descendant collections + all content in them
+            console.log(`Deleting collection ${collection.name} and all its descendants and content`);
+            
+            // find all descendant collections recursively
+            const findDescendants = async (parentId: string): Promise<string[]> => {
+                const children = await Collection.find({ userId, parentCollection: parentId });
+                const childIds = children.map(c => c._id.toString());
+                
+                const allDescendants = [...childIds];
+                for (const childId of childIds) {
+                    const grandChildren = await findDescendants(childId);
+                    allDescendants.push(...grandChildren);
+                }
+                
+                return allDescendants;
+            };
+            
+            const descendantIds = await findDescendants(collectionId as string);
+            const allCollectionIds = [collectionId, ...descendantIds];
+            
+            // delete all content in these collections
             await Content.deleteMany({
-                collection: collectionId,
+                collection: { $in: allCollectionIds },
+                userId
+            });
+            
+            // delete all descendant collections
+            await Collection.deleteMany({
+                _id: { $in: allCollectionIds },
                 userId
             });
         } else {
-            console.log(`Deleting collection ${collection.name} and moving its content to uncategorised`);
+            // delete only this collection: move children up and remove collection from content
+            console.log(`Deleting collection ${collection.name}, propagating children upward`);
+            
+            // move child collections to this collection's parent
+            await Collection.updateMany(
+                { parentCollection: collectionId, userId },
+                { $set: { parentCollection: collection.parentCollection || null } }
+            );
+            
+            // remove collection reference from content (making them uncategorized)
             await Content.updateMany(
                 { collection: collectionId, userId },
                 { $unset: { collection: 1 } }
             );
+            
+            // delete the collection
+            await Collection.deleteOne({
+                userId,
+                _id: collectionId
+            });
         }
-
-        await Collection.deleteOne({
-            userId,
-            _id: collectionId
-        })
 
         res.status(200).json({
             success: true,
-            message: deleteContent === 'true' 
-                ? `Collection and its contents deleted successfully`
-                : `Collection deleted, items moved to uncategorized`
+            message: deleteAll === 'true' 
+                ? `Collection and all nested collections/content deleted successfully`
+                : `Collection deleted, children propagated upward and content uncategorized`
         })
     } catch (error) {
         console.error('Delete collection error:', error);

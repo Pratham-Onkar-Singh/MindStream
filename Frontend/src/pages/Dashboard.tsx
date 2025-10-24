@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { Button } from "../components/Button"
 import { ContentCard } from "../components/ContentCard"
 import { CreateContentModal } from "../components/CreateContentModal"
 import { CreateCollectionModal } from "../components/CreateCollectionModal"
+import { DeleteCollectionModal } from "../components/DeleteCollectionModal"
 import { ViewContentModal } from "../components/ViewContentModal"
 import { SearchBar } from "../components/SearchBar"
 import type { SearchFilters } from "../components/SearchBar"
@@ -10,14 +11,18 @@ import { PlusIcon } from "../icons/PlusIcon"
 import { ShareIcon } from "../icons/ShareIcon"
 import { Sidebar } from "../components/Sidebar"
 import { useContent } from "../hooks/useContent"
-import { contentAPI, shareAPI, searchAPI } from "../api"
+import { contentAPI, shareAPI, searchAPI, collectionAPI } from "../api"
 import { useLocation } from 'react-router-dom';
+import type { CollectionSummary } from "../types/collection"
+import { buildCollectionTree } from "../utils/collectionTree"
 
 export function Dashboard() {
   const location = useLocation();
   
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createCollectionModalOpen, setCreateCollectionModalOpen] = useState(false);
+  const [deleteCollectionModalOpen, setDeleteCollectionModalOpen] = useState(false);
+  const [collectionToDelete, setCollectionToDelete] = useState<string | null>(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedContent, setSelectedContent] = useState<{
@@ -31,6 +36,7 @@ export function Dashboard() {
 
   // Collection state
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
+  const [collections, setCollections] = useState<CollectionSummary[]>([]);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,7 +71,72 @@ export function Dashboard() {
   
   useEffect(() => {
     refresh();
+    loadCollections();
   }, []);
+
+  // Load collections for building descendant map
+  const loadCollections = async () => {
+    try {
+      const response = await collectionAPI.getAll();
+      const fetchedCollections = (response.collections || []).map((c: any) => ({
+        ...c,
+        parentCollection: c.parentCollection || null
+      }));
+      setCollections(fetchedCollections);
+    } catch (error) {
+      console.error('Failed to load collections:', error);
+    }
+  };
+
+  // Build collection tree for displaying nested collections
+  const collectionTree = useMemo(() => buildCollectionTree(collections), [collections]);
+  
+  // Get selected collection details and its children
+  const selectedCollection = useMemo(() => {
+    if (!selectedCollectionId) return null;
+    return collections.find(c => c._id === selectedCollectionId);
+  }, [selectedCollectionId, collections]);
+
+  const childCollections = useMemo(() => {
+    if (!selectedCollectionId) return [];
+    
+    // Find children from the tree
+    const findNodeChildren = (nodes: any[]): any[] => {
+      for (const node of nodes) {
+        if (node._id === selectedCollectionId) {
+          return node.children || [];
+        }
+        if (node.children && node.children.length > 0) {
+          const found = findNodeChildren(node.children);
+          if (found.length > 0) return found;
+        }
+      }
+      return [];
+    };
+    
+    return findNodeChildren(collectionTree);
+  }, [selectedCollectionId, collectionTree]);
+
+  // Build breadcrumb path for selected collection
+  const collectionBreadcrumb = useMemo(() => {
+    if (!selectedCollectionId) return [];
+    
+    const path: CollectionSummary[] = [];
+    const collectionMap = new Map(collections.map(c => [c._id, c]));
+    
+    let currentId: string | null = selectedCollectionId;
+    while (currentId) {
+      const collection = collectionMap.get(currentId);
+      if (collection) {
+        path.unshift(collection);
+        currentId = collection.parentCollection || null;
+      } else {
+        break;
+      }
+    }
+    
+    return path;
+  }, [selectedCollectionId, collections]);
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this content?')) {
@@ -185,16 +256,65 @@ export function Dashboard() {
     setSearchResults([]);
   }, []);
 
+  // Delete collection handler
+  const handleDeleteCollection = useCallback((collectionId: string) => {
+    setCollectionToDelete(collectionId);
+    setDeleteCollectionModalOpen(true);
+  }, []);
+
+  // Get info about collection to delete
+  const collectionToDeleteInfo = useMemo(() => {
+    if (!collectionToDelete) return null;
+    
+    const collection = collections.find(c => c._id === collectionToDelete);
+    if (!collection) return null;
+    
+    // Check if it has children
+    const hasChildren = collections.some(c => c.parentCollection === collectionToDelete);
+    
+    return {
+      collection,
+      hasChildren,
+      hasContent: (collection.contentCount || 0) > 0
+    };
+  }, [collectionToDelete, collections]);
+
+  const handleConfirmDelete = useCallback(async (deleteAll: boolean) => {
+    if (!collectionToDelete) return;
+    
+    try {
+      await collectionAPI.delete(collectionToDelete, deleteAll);
+      
+      // If we deleted the currently selected collection, clear the selection
+      if (collectionToDelete === selectedCollectionId) {
+        setSelectedCollectionId(null);
+      }
+      
+      // Refresh collections and content
+      loadCollections();
+      refresh();
+      
+      // Refresh the sidebar
+      if ((window as any).refreshCollections) {
+        (window as any).refreshCollections();
+      }
+      
+      setDeleteCollectionModalOpen(false);
+      setCollectionToDelete(null);
+    } catch (error) {
+      console.error('Delete collection error:', error);
+      alert('Failed to delete collection');
+    }
+  }, [collectionToDelete, selectedCollectionId, refresh]);
+
   // Determine which content to display
   let displayedContents = isSearching ? searchResults : contents;
   
-  // Apply collection filter first
+  // Apply collection filter (only direct content, not from nested collections)
   if (!isSearching && selectedCollectionId) {
     displayedContents = contents.filter(content => {
-      // Convert both to strings for comparison in case one is ObjectId
       const contentCollection = content.collection?.toString();
-      const selectedCollection = selectedCollectionId?.toString();
-      return contentCollection === selectedCollection;
+      return contentCollection === selectedCollectionId;
     });
   }
   
@@ -217,6 +337,7 @@ export function Dashboard() {
             }}
             selectedCollectionId={selectedCollectionId}
             onCreateCollectionClick={() => setCreateCollectionModalOpen(true)}
+            onDeleteCollection={handleDeleteCollection}
           />
         </div>
         <CreateContentModal 
@@ -242,6 +363,17 @@ export function Dashboard() {
             }
             refresh();
           }}
+        />
+        <DeleteCollectionModal
+          open={deleteCollectionModalOpen}
+          onClose={() => {
+            setDeleteCollectionModalOpen(false);
+            setCollectionToDelete(null);
+          }}
+          onConfirm={handleConfirmDelete}
+          collection={collectionToDeleteInfo?.collection || null}
+          hasChildren={collectionToDeleteInfo?.hasChildren || false}
+          hasContent={collectionToDeleteInfo?.hasContent || false}
         />
         <CreateContentModal 
           open={editModalOpen} 
@@ -298,6 +430,39 @@ export function Dashboard() {
             />
           </div>
 
+          {/* Breadcrumb Navigation */}
+          {!isSearching && collectionBreadcrumb.length > 0 && (
+            <div className="flex items-center gap-2 text-sm">
+              <button
+                onClick={() => setSelectedCollectionId(null)}
+                className="text-gray-500 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                All Collections
+              </button>
+              {collectionBreadcrumb.map((collection, index) => (
+                <div key={collection._id} className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <button
+                    onClick={() => setSelectedCollectionId(collection._id)}
+                    className={`flex items-center gap-1 transition-colors cursor-pointer ${
+                      index === collectionBreadcrumb.length - 1
+                        ? 'text-white font-medium'
+                        : 'text-gray-500 hover:text-white'
+                    }`}
+                  >
+                    <span>{collection.icon}</span>
+                    <span>{collection.name}</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Loading State */}
           {(loading || searchLoading) && (
             <div className="flex items-center justify-center py-20">
@@ -335,6 +500,76 @@ export function Dashboard() {
             </div>
           )}
 
+          {/* Child Collections Section - Show when a collection is selected */}
+          {!loading && !isSearching && selectedCollectionId && childCollections.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                  </svg>
+                  Subcollections in {selectedCollection?.name}
+                </h2>
+                <span className="text-sm text-gray-500">
+                  {childCollections.length} {childCollections.length === 1 ? 'subcollection' : 'subcollections'}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {childCollections.map((child: any) => (
+                  <button
+                    key={child._id}
+                    onClick={() => setSelectedCollectionId(child._id)}
+                    className="group relative bg-gray-900 hover:bg-gray-800 border border-gray-800 hover:border-gray-700 rounded-xl p-4 transition-all text-left cursor-pointer"
+                    style={{
+                      borderLeft: `4px solid ${child.color}`
+                    }}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <span className="text-3xl">{child.icon}</span>
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0010.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                        {child.contentCount}
+                      </div>
+                    </div>
+                    <h3 className="font-semibold text-white mb-1 group-hover:text-gray-100">
+                      {child.name}
+                    </h3>
+                    {child.description && (
+                      <p className="text-sm text-gray-500 line-clamp-2">
+                        {child.description}
+                      </p>
+                    )}
+                    {child.children && child.children.length > 0 && (
+                      <div className="mt-2 flex items-center gap-1 text-xs text-gray-600">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                        </svg>
+                        {child.children.length} nested
+                      </div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Content Header - Show when displaying content */}
+          {!loading && !searchLoading && !error && displayedContents.length > 0 && (
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0010.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                {selectedCollectionId ? `Content in ${selectedCollection?.name}` : 'All Content'}
+              </h2>
+              <span className="text-sm text-gray-500">
+                {displayedContents.length} {displayedContents.length === 1 ? 'item' : 'items'}
+              </span>
+            </div>
+          )}
+
           {/* Empty State */}
           {!loading && !searchLoading && !error && displayedContents.length === 0 && (
             <div className="flex items-center justify-center py-20">
@@ -345,14 +580,16 @@ export function Dashboard() {
                 <p className="text-gray-500 mb-6">
                   {isSearching 
                     ? `No content matches "${searchQuery}". Try adjusting your search or filters.`
-                    : 'Start building your second brain by adding your first piece of content'
+                    : selectedCollectionId
+                      ? 'Start building collection by adding a piece of content'
+                      : 'Start building your second brain by adding your first piece of content'
                   }
                 </p>
                 {!isSearching && (
                   <Button
                     variant="primary"
                     size="md"
-                    text="Add Your First Content"
+                    text={selectedCollectionId ? "Add Content" : "Add Your First Content"}
                     startIcon={<PlusIcon size="md" />}
                     onClick={() => setCreateModalOpen(true)}
                   />

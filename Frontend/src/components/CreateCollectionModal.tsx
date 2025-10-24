@@ -1,9 +1,11 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
 import { Button } from "./Button";
 import { Input } from "./Input";
 import { Textarea } from "./Textarea";
 import { CloseIcon } from "../icons/CloseIcon";
 import { collectionAPI } from "../api";
+import type { CollectionSummary } from "../types/collection";
+import { buildCollectionTree, flattenCollectionTree } from "../utils/collectionTree";
 
 interface CreateCollectionModalProps {
     open: boolean;
@@ -17,6 +19,28 @@ export function CreateCollectionModal({ open, onClose, onSuccess }: CreateCollec
     
     const [loading, setLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    const [collections, setCollections] = useState<CollectionSummary[]>([]);
+    const [selectedParentId, setSelectedParentId] = useState<string>('');
+
+    // Build tree for indented parent selection
+    const collectionTree = useMemo(() => buildCollectionTree(collections), [collections]);
+    const flattenedTree = useMemo(() => flattenCollectionTree(collectionTree), [collectionTree]);
+
+    // Load collections when modal opens
+    useEffect(() => {
+        if (open) {
+            loadCollections();
+        }
+    }, [open]);
+
+    const loadCollections = async () => {
+        try {
+            const response = await collectionAPI.getAll();
+            setCollections(response.collections || []);
+        } catch (error) {
+            console.error('Failed to fetch collections:', error);
+        }
+    };
 
     const handleSubmit = async () => {
         const name = nameRef.current?.value.trim();
@@ -34,12 +58,14 @@ export function CreateCollectionModal({ open, onClose, onSuccess }: CreateCollec
                 name,
                 description: descriptionRef.current?.value.trim(),
                 icon: '📁', // Default icon
-                color: '#6B7280' // Default gray color
+                color: '#6B7280', // Default gray color
+                parentCollection: selectedParentId || undefined
             });
 
             // Clear form
             if (nameRef.current) nameRef.current.value = '';
             if (descriptionRef.current) descriptionRef.current.value = '';
+            setSelectedParentId('');
             
             onSuccess();
             onClose();
@@ -78,6 +104,27 @@ export function CreateCollectionModal({ open, onClose, onSuccess }: CreateCollec
                                 reference={descriptionRef} 
                                 rows={3}
                             />
+                        </div>
+                        <div className="w-full">
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                                Parent Collection (optional)
+                            </label>
+                            <select
+                                value={selectedParentId}
+                                onChange={(e) => setSelectedParentId(e.target.value)}
+                                className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 border border-gray-700 focus:border-gray-600 focus:outline-none"
+                            >
+                                <option value="">None (Top Level)</option>
+                                {flattenedTree.map((node) => {
+                                    const indent = '  '.repeat(node.depth);
+                                    const prefix = node.depth > 0 ? `${indent}↳ ` : '';
+                                    return (
+                                        <option key={node._id} value={node._id}>
+                                            {prefix}{node.icon} {node.name}
+                                        </option>
+                                    );
+                                })}
+                            </select>
                         </div>
                     </div>
 

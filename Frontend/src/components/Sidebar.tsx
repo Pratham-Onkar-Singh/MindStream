@@ -1,22 +1,15 @@
 import { Logo } from "../icons/Logo"
 import { SidebarItem } from "./SidebarItem"
 import { PlusIcon } from "../icons/PlusIcon"
+import { DeleteIcon } from "../icons/DeleteIcon"
 import { useNavigate, useLocation } from "react-router-dom"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { collectionAPI } from "../api"
-
-interface Collection {
-    _id: string;
-    name: string;
-    description?: string;
-    icon: string;
-    color: string;
-    contentCount: number;
-    isDefault: boolean;
-}
+import type { CollectionSummary, CollectionTreeNode } from "../types/collection"
+import { buildCollectionTree, flattenCollectionTree } from "../utils/collectionTree"
 
 // Cache for collections to avoid reloading on every mount
-let collectionsCache: Collection[] | null = null;
+let collectionsCache: CollectionSummary[] | null = null;
 let cacheTimestamp: number = 0;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
@@ -26,6 +19,7 @@ interface SidebarProps {
     onCollectionSelect?: (collectionId: string | null) => void;
     selectedCollectionId?: string | null;
     onCreateCollectionClick?: () => void;
+    onDeleteCollection?: (collectionId: string) => void;
 }
 
 export const Sidebar = ({ 
@@ -33,15 +27,42 @@ export const Sidebar = ({
     activeFilter = 'all',
     onCollectionSelect,
     selectedCollectionId,
-    onCreateCollectionClick 
+    onCreateCollectionClick,
+    onDeleteCollection 
 }: SidebarProps) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const [collections, setCollections] = useState<Collection[]>([]);
+    const [collections, setCollections] = useState<CollectionSummary[]>([]);
     const [collectionsLoading, setCollectionsLoading] = useState(true);
+    const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set());
     
     // Check if we're on the profile page
     const isOnProfile = location.pathname === '/profile';
+
+    // Build tree structure from flat collections list
+    const collectionTree = useMemo(() => buildCollectionTree(collections), [collections]);
+    const flattenedTree = useMemo(() => flattenCollectionTree(collectionTree), [collectionTree]);
+
+    // Auto-expand path to selected collection
+    useEffect(() => {
+        if (selectedCollectionId) {
+            const collectionMap = new Map(collections.map(c => [c._id, c]));
+            const pathIds = new Set<string>();
+            
+            let currentId: string | null = selectedCollectionId;
+            while (currentId) {
+                const collection = collectionMap.get(currentId);
+                if (collection?.parentCollection) {
+                    pathIds.add(collection.parentCollection);
+                    currentId = collection.parentCollection;
+                } else {
+                    break;
+                }
+            }
+            
+            setExpandedCollections(prev => new Set([...prev, ...pathIds]));
+        }
+    }, [selectedCollectionId, collections]);
 
     useEffect(() => {
         loadCollections();
@@ -99,6 +120,128 @@ export const Sidebar = ({
             // Navigate to dashboard with filter state
             navigate('/dashboard', { state: { filter: filterType } });
         }
+    };
+
+    // Toggle collection expand/collapse
+    const toggleCollectionExpand = (collectionId: string) => {
+        setExpandedCollections(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(collectionId)) {
+                newSet.delete(collectionId);
+            } else {
+                newSet.add(collectionId);
+            }
+            return newSet;
+        });
+    };
+
+    // Recursive function to render collection tree
+    const renderCollectionNodes = (nodes: CollectionTreeNode[]) => {
+        return nodes.map((node) => {
+            const isActive = selectedCollectionId === node._id;
+            const hasChildren = node.children.length > 0;
+            const isExpanded = expandedCollections.has(node._id);
+            
+            return (
+                <div key={node._id}>
+                    <div 
+                        className="group flex items-center relative w-full"
+                        style={{
+                            paddingLeft: `${node.depth * 16}px`
+                        }}
+                    >
+                        {/* Expand/Collapse Button - Always reserve space */}
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (hasChildren) {
+                                    toggleCollectionExpand(node._id);
+                                }
+                            }}
+                            className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded transition-colors ${
+                                hasChildren 
+                                    ? 'text-gray-500 hover:text-white hover:bg-gray-700 cursor-pointer' 
+                                    : 'invisible'
+                            }`}
+                            disabled={!hasChildren}
+                        >
+                            {hasChildren && (
+                                <svg 
+                                    className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                                </svg>
+                            )}
+                        </button>
+                        
+                        {/* Collection Button */}
+                        <button
+                            onClick={() => {
+                                if (onCollectionSelect) {
+                                    onCollectionSelect(node._id);
+                                } else {
+                                    navigate('/dashboard', { state: { collectionId: node._id } });
+                                }
+                            }}
+                            className={`flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm cursor-pointer min-w-0 ${
+                                isActive
+                                    ? 'bg-gray-800 text-white shadow-sm'
+                                    : 'text-gray-400 hover:bg-gray-800/70 hover:text-white'
+                            }`}
+                        >
+                            {/* Color indicator bar */}
+                            {isActive && (
+                                <div 
+                                    className="absolute left-0 top-0 bottom-0 w-1 rounded-r-full"
+                                    style={{ backgroundColor: node.color }}
+                                />
+                            )}
+                            
+                            <span className="text-base flex-shrink-0">{node.icon}</span>
+                            <div className="flex-1 text-left overflow-hidden" style={{ minWidth: 0, maxWidth: '100%' }}>
+                                <div className="font-medium truncate text-sm" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {node.name}
+                                </div>
+                                {node.description && node.depth === 0 && (
+                                    <div className="text-xs text-gray-500 truncate mt-0.5">
+                                        {node.description}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                                <span className="text-xs text-gray-500">
+                                    {node.contentCount}
+                                </span>
+                                
+                                {/* Delete Button - Show on hover */}
+                                {onDeleteCollection && (
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onDeleteCollection(node._id);
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-900/30 rounded transition-all text-gray-500 hover:text-red-400"
+                                        title="Delete collection"
+                                    >
+                                        <DeleteIcon size="size-4" />
+                                    </button>
+                                )}
+                            </div>
+                        </button>
+                    </div>
+                    
+                    {/* Recursively render children - only if expanded */}
+                    {hasChildren && isExpanded && (
+                        <div>
+                            {renderCollectionNodes(node.children)}
+                        </div>
+                    )}
+                </div>
+            );
+        });
     };
 
     return <div className="border-r border-gray-800 bg-black w-64 fixed top-0 left-0 h-screen flex flex-col">
@@ -176,51 +319,20 @@ export const Sidebar = ({
                             <div className="text-center py-4 text-gray-500 text-xs">
                                 Loading...
                             </div>
-                        ) : collections.length === 0 ? (
+                        ) : flattenedTree.length === 0 ? (
                             <div className="text-center py-4 text-gray-500 text-xs">
                                 <p>No collections yet</p>
                                 <p className="mt-1">Click + to create</p>
                             </div>
                         ) : (
                             <div className="space-y-1">
-                                {collections.map((collection) => (
-                                    <button
-                                        key={collection._id}
-                                        onClick={() => {
-                                            if (onCollectionSelect) {
-                                                onCollectionSelect(collection._id);
-                                            } else {
-                                                // Navigate to dashboard with collection selected
-                                                navigate('/dashboard', { state: { collectionId: collection._id } });
-                                            }
-                                        }}
-                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-sm ${
-                                            selectedCollectionId === collection._id
-                                                ? 'bg-gray-800 text-white'
-                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                        }`}
-                                        style={{
-                                            borderLeft: selectedCollectionId === collection._id 
-                                                ? `3px solid ${collection.color}` 
-                                                : 'none',
-                                            paddingLeft: selectedCollectionId === collection._id ? '9px' : '12px'
-                                        }}
-                                    >
-                                        <span className="text-base">{collection.icon}</span>
-                                        <div className="flex-1 text-left min-w-0">
-                                            <div className="font-medium truncate text-sm">{collection.name}</div>
-                                        </div>
-                                        <span className="text-xs text-gray-500">
-                                            {collection.contentCount}
-                                        </span>
-                                    </button>
-                                ))}
+                                {renderCollectionNodes(collectionTree)}
                             </div>
                         )}
 
-                        {collections.length > 0 && (
+                        {flattenedTree.length > 0 && (
                             <div className="mt-3 text-xs text-gray-600 text-center">
-                                {collections.length} {collections.length === 1 ? 'collection' : 'collections'}
+                                {flattenedTree.length} {flattenedTree.length === 1 ? 'collection' : 'collections'}
                             </div>
                         )}
                     </div>

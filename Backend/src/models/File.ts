@@ -25,7 +25,7 @@ const fileSchema = new mongoose.Schema({
     width: {
         type: Number,
     },
-    contendId: {
+    contentId: {
         type: mongoose.Types.ObjectId, 
         ref: 'Content'
     }

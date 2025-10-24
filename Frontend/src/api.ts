@@ -28,9 +28,13 @@ api.interceptors.response.use(
     (response) => response,
     (error: AxiosError) => {
         if (error.response?.status === 401) {
-            // Unauthorized request - clear token and redirect to signin
-            localStorage.removeItem('token');
-            window.location.href = '/signin';
+            // Only redirect if not on signin/signup pages (to avoid clearing fields on wrong credentials)
+            const currentPath = window.location.pathname;
+            if (currentPath !== '/signin' && currentPath !== '/signup') {
+                // Unauthorized request - clear token and redirect to signin
+                localStorage.removeItem('token');
+                window.location.href = '/signin';
+            }
         }
         return Promise.reject(error);
     }

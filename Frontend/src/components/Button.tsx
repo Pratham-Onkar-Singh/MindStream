@@ -6,7 +6,8 @@ interface ButtonProps {
     startIcon?: any;
     endIcon?: any;
     onClick?: () => void;
-    className?: string
+    className?: string;
+    type?: "button" | "submit" | "reset";
 }
 
 const variantStyles = {
@@ -15,7 +16,7 @@ const variantStyles = {
 }
 
 const sizeStyles = {
-    "sm": "w-fit h-9 text-[0.9rem] px-6 py-5",
+    "sm": "w-fit h-9 text-[0.9rem] px-6 py-5 gap-3",
     "md": "w-fit h-12 text-[1.1rem] p-3 gap-2",
     "lg": "w-50 h-15 text-[1.2rem] p-5"
 }
@@ -24,6 +25,7 @@ export const Button = (props: ButtonProps) => {
     // if(props.variant == "primary") {
         return (
             <button 
+                type={props.type || "button"}
                 onClick={props.onClick}
                 disabled={props.disabled || false}
             >

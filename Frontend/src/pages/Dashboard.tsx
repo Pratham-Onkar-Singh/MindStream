@@ -325,7 +325,7 @@ export function Dashboard() {
   
   return (
     <>
-      <div className="flex">
+      <div className="flex h-screen bg-gradient-mindstream bg-grid-pattern bg-radial-overlay">
         <div className="">
           <Sidebar 
             onFilterChange={handleSidebarFilter}
@@ -398,11 +398,11 @@ export function Dashboard() {
           type={selectedContent?.type || ""}
           link={selectedContent?.link}
         />
-        <div className="flex flex-col gap-10 p-10 min-h-screen w-dvw bg-black ml-64">
+        <div className="flex flex-col gap-6 md:gap-10 p-4 md:p-10 flex-1 h-screen overflow-y-auto ml-16 md:ml-64">
           {/* Header */}
-          <div className="flex justify-between items-center pb-4 border-b border-gray-800">
-            <div>
-              <h1 className="text-2xl font-bold text-white">My Second Brain</h1>
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 pb-4 border-b border-gray-800">
+            <div className="text-center">
+              <h1 className="text-xl md:text-2xl font-bold text-white">My Second Brain</h1>
               <p className="text-gray-500 text-sm mt-1">
                 {isSearching 
                   ? `${searchResults.length} result${searchResults.length !== 1 ? 's' : ''} found`
@@ -410,12 +410,12 @@ export function Dashboard() {
                 }
               </p>
             </div>
-            <div className="gap-4 flex justify-start">
+            <div className="gap-2 md:gap-4 flex justify-evenly">
               <div onClick={() => handleBrainShare()}>
-                <Button variant="secondary" size="md" text="Share Brain" startIcon={<ShareIcon size="size-4"/>}/>
+                <Button variant="secondary" size="sm" text="Share Brain" startIcon={<ShareIcon size="size-4"/>}/>
               </div>
               <div className="">
-                <Button variant="primary" size="md" text="Add Content" startIcon={<PlusIcon size="md"/>} onClick={() => {setCreateModalOpen(true)}}/>
+                <Button variant="primary" size="sm" text="Add Content" startIcon={<PlusIcon size="md"/>} onClick={() => {setCreateModalOpen(true)}}/>
               </div>
             </div>
           </div>
@@ -432,31 +432,33 @@ export function Dashboard() {
 
           {/* Breadcrumb Navigation */}
           {!isSearching && collectionBreadcrumb.length > 0 && (
-            <div className="flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm overflow-x-auto py-2 scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent min-h-[2.5rem]">
               <button
                 onClick={() => setSelectedCollectionId(null)}
-                className="text-gray-500 hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+                className="text-gray-500 hover:text-white transition-colors flex items-center gap-1 cursor-pointer flex-shrink-0"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
-                All Collections
+                <span className="whitespace-nowrap hidden sm:inline">All Collections</span>
+                <span className="whitespace-nowrap sm:hidden">All</span>
               </button>
               {collectionBreadcrumb.map((collection, index) => (
-                <div key={collection._id} className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div key={collection._id} className="flex items-center gap-2 flex-shrink-0">
+                  <svg className="w-4 h-4 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                   <button
                     onClick={() => setSelectedCollectionId(collection._id)}
-                    className={`flex items-center gap-1 transition-colors cursor-pointer ${
+                    className={`flex items-center gap-1 transition-colors cursor-pointer whitespace-nowrap ${
                       index === collectionBreadcrumb.length - 1
                         ? 'text-white font-medium'
                         : 'text-gray-500 hover:text-white'
                     }`}
+                    title={collection.name}
                   >
-                    <span>{collection.icon}</span>
-                    <span>{collection.name}</span>
+                    <span className="flex-shrink-0">{collection.icon}</span>
+                    <span className="inline-block max-w-[120px] sm:max-w-[150px] md:max-w-[200px] truncate align-middle">{collection.name}</span>
                   </button>
                 </div>
               ))}
@@ -600,7 +602,7 @@ export function Dashboard() {
 
           {/* Content Grid */}
           {!loading && !searchLoading && !error && displayedContents.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
               {displayedContents.map((content) => (
                 <ContentCard 
                   key={content._id} 

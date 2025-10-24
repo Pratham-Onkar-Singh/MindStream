@@ -35,6 +35,39 @@
       opacity: 1;
     }
   }
+
+  /* Classy gradient background */
+  .bg-gradient-mindstream {
+    background: linear-gradient(135deg, #000000 0%, #0a0a0a 25%, #1a0a2e 50%, #0a0a0a 75%, #000000 100%);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+  }
+
+  @keyframes gradientShift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  /* Subtle grid overlay */
+  .bg-grid-pattern {
+    background-image: 
+      linear-gradient(to right, rgba(80, 70, 228, 0.03) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(80, 70, 228, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+  }
+
+  /* Radial gradient overlay for depth */
+  .bg-radial-overlay {
+    background: radial-gradient(ellipse at top, rgba(80, 70, 228, 0.15) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom, rgba(80, 70, 228, 0.1) 0%, transparent 50%);
+  }
 }
 
 body {

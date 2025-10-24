@@ -2,8 +2,10 @@ import { Logo } from "../icons/Logo"
 import { SidebarItem } from "./SidebarItem"
 import { PlusIcon } from "../icons/PlusIcon"
 import { DeleteIcon } from "../icons/DeleteIcon"
+import { CollectionsMobileModal } from "./CollectionsMobileModal"
 import { useNavigate, useLocation } from "react-router-dom"
 import { useEffect, useState, useMemo } from "react"
+import { createPortal } from "react-dom"
 import { collectionAPI } from "../api"
 import type { CollectionSummary, CollectionTreeNode } from "../types/collection"
 import { buildCollectionTree, flattenCollectionTree } from "../utils/collectionTree"
@@ -35,6 +37,7 @@ export const Sidebar = ({
     const [collections, setCollections] = useState<CollectionSummary[]>([]);
     const [collectionsLoading, setCollectionsLoading] = useState(true);
     const [expandedCollections, setExpandedCollections] = useState<Set<string>>(new Set());
+    const [mobileCollectionsModalOpen, setMobileCollectionsModalOpen] = useState(false);
     
     // Check if we're on the profile page
     const isOnProfile = location.pathname === '/profile';
@@ -169,7 +172,7 @@ export const Sidebar = ({
                                 <svg 
                                     className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
                                     fill="none" 
-                                    stroke="currentColor" 
+                                    stroke="currentColor"
                                     viewBox="0 0 24 24"
                                 >
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
@@ -186,7 +189,7 @@ export const Sidebar = ({
                                     navigate('/dashboard', { state: { collectionId: node._id } });
                                 }
                             }}
-                            className={`flex-1 flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm cursor-pointer min-w-0 ${
+                            className={`flex-1 mb-2 flex items-center gap-2.5 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm cursor-pointer min-w-0 ${
                                 isActive
                                     ? 'bg-gray-800 text-white shadow-sm'
                                     : 'text-gray-400 hover:bg-gray-800/70 hover:text-white'
@@ -216,14 +219,18 @@ export const Sidebar = ({
                                     {node.contentCount}
                                 </span>
                                 
-                                {/* Delete Button - Show on hover */}
+                                {/* Delete Button - Always visible on mobile or when active, show on hover on desktop */}
                                 {onDeleteCollection && (
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             onDeleteCollection(node._id);
                                         }}
-                                        className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-900/30 rounded transition-all text-gray-500 hover:text-red-400"
+                                        className={`p-1.5 hover:bg-red-900/30 rounded transition-all text-gray-500 hover:text-red-400 ${
+                                            isActive 
+                                                ? 'opacity-100' 
+                                                : 'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+                                        }`}
                                         title="Delete collection"
                                     >
                                         <DeleteIcon size="size-4" />
@@ -244,12 +251,12 @@ export const Sidebar = ({
         });
     };
 
-    return <div className="border-r border-gray-800 bg-black w-64 fixed top-0 left-0 h-screen flex flex-col">
+    return <div className="border-r border-gray-800 bg-black w-16 md:w-64 fixed top-0 left-0 h-screen flex flex-col">
         <div className="text-2xl flex pl-4 mb-4 gap-4 pt-8 h-20 items-center text-white font-bold flex-shrink-0">
             <div className="cursor-pointer" onClick={() => navigate('/dashboard')}>
-                <Logo className="w-12"/>
+                <Logo className="w-8 md:w-12"/>
             </div>
-            <div className="cursor-pointer" onClick={() => navigate('/dashboard')}>
+            <div className="cursor-pointer hidden md:block" onClick={() => navigate('/dashboard')}>
                 Mind<span className="text-custom-900">Stream</span>
             </div>
         </div>
@@ -294,48 +301,64 @@ export const Sidebar = ({
                 />
 
                 {/* Collections Section */}
-                <div className="mt-6 px-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3">
-                            Collections
-                        </h3>
+                <div className="mt-6 px-2 md:px-4">
+                    {/* Mobile: Single Folder Icon */}
+                    <div className="md:hidden">
                         <button
-                            onClick={() => {
-                                if (onCreateCollectionClick) {
-                                    onCreateCollectionClick();
-                                } else {
-                                    // Navigate to dashboard where user can create a collection
-                                    navigate('/dashboard');
-                                }
-                            }}
-                            className="p-1 hover:bg-gray-800 rounded transition-colors"
-                            title="Create Collection"
+                            onClick={() => setMobileCollectionsModalOpen(true)}
+                            className="w-full p-3 hover:bg-gray-800 rounded-lg transition-colors flex items-center justify-center"
+                            title="View Collections"
                         >
-                            <PlusIcon size="sm" />
+                            <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                            </svg>
                         </button>
                     </div>
 
-                    {collectionsLoading ? (
-                            <div className="text-center py-4 text-gray-500 text-xs">
-                                Loading...
-                            </div>
-                        ) : flattenedTree.length === 0 ? (
-                            <div className="text-center py-4 text-gray-500 text-xs">
-                                <p>No collections yet</p>
-                                <p className="mt-1">Click + to create</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-1">
-                                {renderCollectionNodes(collectionTree)}
-                            </div>
-                        )}
+                    {/* Desktop: Full Collections List */}
+                    <div className="hidden md:block">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider px-3">
+                                Collections
+                            </h3>
+                            <button
+                                onClick={() => {
+                                    if (onCreateCollectionClick) {
+                                        onCreateCollectionClick();
+                                    } else {
+                                        // Navigate to dashboard where user can create a collection
+                                        navigate('/dashboard');
+                                    }
+                                }}
+                                className="p-1 hover:bg-gray-800 rounded transition-colors"
+                                title="Create Collection"
+                            >
+                                <PlusIcon size="sm" />
+                            </button>
+                        </div>
 
-                        {flattenedTree.length > 0 && (
-                            <div className="mt-3 text-xs text-gray-600 text-center">
-                                {flattenedTree.length} {flattenedTree.length === 1 ? 'collection' : 'collections'}
-                            </div>
-                        )}
+                        {collectionsLoading ? (
+                                <div className="text-center py-4 text-gray-500 text-xs">
+                                    Loading...
+                                </div>
+                            ) : flattenedTree.length === 0 ? (
+                                <div className="text-center py-4 text-gray-500 text-xs">
+                                    <p>No collections yet</p>
+                                    <p className="mt-1">Click + to create</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-1">
+                                    {renderCollectionNodes(collectionTree)}
+                                </div>
+                            )}
+
+                            {flattenedTree.length > 0 && (
+                                <div className="mt-3 text-xs text-gray-600 text-center">
+                                    {flattenedTree.length} {flattenedTree.length === 1 ? 'collection' : 'collections'}
+                                </div>
+                            )}
                     </div>
+                </div>
             </div>
         </div>
 
@@ -353,5 +376,19 @@ export const Sidebar = ({
                 isActive={isOnProfile}
             />
         </div>
+
+        {/* Mobile Collections Modal - Rendered via Portal */}
+        {createPortal(
+            <CollectionsMobileModal
+                open={mobileCollectionsModalOpen}
+                onClose={() => setMobileCollectionsModalOpen(false)}
+                collections={collectionTree}
+                selectedCollectionId={selectedCollectionId || null}
+                onCollectionSelect={onCollectionSelect || (() => {})}
+                onCreateCollection={onCreateCollectionClick}
+                onDeleteCollection={onDeleteCollection}
+            />,
+            document.body
+        )}
     </div>
 }

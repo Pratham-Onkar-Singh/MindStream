@@ -47,7 +47,7 @@ export const ViewContentModal = ({ open, onClose, title, description, type, link
   return (
     <div className="w-full h-screen fixed top-0 left-0 bg-black/40 flex justify-center items-center backdrop-blur-sm z-50" onClick={onClose}>
       <div className="flex flex-col z-50" onClick={(e) => e.stopPropagation()}>
-        <div className="bg-black p-8 rounded-2xl border border-gray-800 min-w-[600px] max-w-[800px] max-h-[80vh] overflow-y-auto relative z-50">
+        <div className="bg-black p-4 md:p-8 rounded-2xl border border-gray-800 w-[90vw] md:min-w-[600px] md:max-w-[800px] max-h-[80vh] overflow-y-auto relative z-50">
           {/* Close Button */}
           <div className="flex justify-end mb-4">
             <button 

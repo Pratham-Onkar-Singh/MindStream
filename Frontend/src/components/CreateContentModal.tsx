@@ -235,7 +235,7 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
     return <div>
         {open && <div className="w-full h-screen fixed top-0 left-0 bg-black/40 flex justify-center items-center backdrop-blur-sm z-50">
               <div className="flex flex-col z-50">
-                <span className="bg-black opacity-100 p-6 rounded-2xl border border-gray-800 min-w-[500px] relative z-50">
+                <span className="bg-black opacity-100 p-4 md:p-6 rounded-2xl border border-gray-800 w-[90vw] md:min-w-[500px] md:w-auto relative z-50">
                     <div className="flex justify-between items-center mb-5">
                         <h2 className="text-xl font-bold text-white">
                             {editMode ? 'Edit Content' : 'Add New Content'}
@@ -325,7 +325,7 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
                                 />
                             </div>
                         ) : (
-                            <div className="w-full">
+                            <div className="w-full mt-4">
                                 <div className="border-2 border-dashed border-gray-700 rounded-lg p-6 text-center hover:border-gray-600 transition-colors">
                                     <input
                                         ref={fileInputRef}

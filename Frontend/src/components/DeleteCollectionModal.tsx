@@ -37,7 +37,7 @@ export function DeleteCollectionModal({
     return (
         <div className="w-full h-screen fixed top-0 left-0 bg-black/40 flex justify-center items-center backdrop-blur-sm z-50">
             <div className="flex flex-col z-50">
-                <span className="bg-black opacity-100 p-6 rounded-2xl border border-gray-800 min-w-[500px] max-w-[600px] relative z-50">
+                <span className="bg-black opacity-100 p-4 md:p-6 rounded-2xl border border-gray-800 w-[90vw] md:min-w-[500px] md:max-w-[600px] relative z-50">
                     {/* Header */}
                     <div className="flex justify-between items-center mb-5">
                         <div className="flex items-center gap-3">

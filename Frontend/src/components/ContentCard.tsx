@@ -68,9 +68,9 @@ export const ContentCard = ({ id, title, description, type, link, onDelete, onEd
             </span>
           </div>
           
-          {/* Action buttons - visible on hover, only shown if callbacks provided */}
+          {/* Action buttons - visible on hover on desktop, always visible on mobile */}
           {(onEdit || onDelete || onSave) && (
-            <div className={`flex gap-2 transition-opacity duration-200 ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
+            <div className={`flex gap-2 transition-opacity duration-200 opacity-100 md:opacity-0 ${isHovered ? 'md:opacity-100' : ''}`}>
               {onSave && (
                 <button 
                   onClick={() => onSave(id)}

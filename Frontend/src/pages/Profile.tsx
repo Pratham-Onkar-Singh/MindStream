@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sidebar } from "../components/Sidebar";
 import { Button } from "../components/Button";
 import { CreateCollectionModal } from "../components/CreateCollectionModal";
 import { userAPI } from "../api";
+import { SkeletonProfileCard } from "../components/SkeletonLoader";
 
 export function Profile() {
+    const navigate = useNavigate();
     const [username, setUsername] = useState("");
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
@@ -77,7 +80,7 @@ export function Profile() {
     };    const handleLogout = () => {
         // TODO: Implement logout functionality
         localStorage.removeItem('token');
-        window.location.href = '/signin';
+        navigate('/auth?mode=signin');
     };
 
     return (
@@ -107,13 +110,24 @@ export function Profile() {
 
                     {/* Loading State */}
                     {loading && (
-                        <div className="flex items-center justify-center py-20">
-                            <div className="text-center">
-                                <div className="relative w-16 h-16 mx-auto mb-6">
-                                    <div className="absolute inset-0 border-4 border-gray-800 rounded-full"></div>
-                                    <div className="absolute inset-0 border-4 border-transparent border-t-white rounded-full animate-spin"></div>
+                        <div className="space-y-6">
+                            <SkeletonProfileCard />
+                            
+                            {/* Additional skeleton cards */}
+                            <div className="bg-black/60 backdrop-blur-sm border border-gray-800 rounded-xl p-6 animate-pulse">
+                                <div className="h-6 bg-gray-900 rounded w-48 mb-6"></div>
+                                <div className="space-y-4">
+                                    <div className="h-4 bg-gray-900 rounded w-32 mb-2"></div>
+                                    <div className="h-12 bg-gray-900 rounded w-full"></div>
                                 </div>
-                                <p className="text-gray-400 font-medium">Loading profile...</p>
+                            </div>
+
+                            <div className="bg-black/60 backdrop-blur-sm border border-gray-800 rounded-xl p-6 animate-pulse">
+                                <div className="h-6 bg-gray-900 rounded w-48 mb-6"></div>
+                                <div className="space-y-3">
+                                    <div className="h-4 bg-gray-900 rounded w-full"></div>
+                                    <div className="h-4 bg-gray-900 rounded w-3/4"></div>
+                                </div>
                             </div>
                         </div>
                     )}

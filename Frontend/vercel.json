@@ -5,6 +5,18 @@
       "destination": "/index.html"
     }
   ],
+  "redirects": [
+    {
+      "source": "/signin",
+      "destination": "/auth?mode=signin",
+      "permanent": false
+    },
+    {
+      "source": "/signup",
+      "destination": "/auth?mode=signup",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

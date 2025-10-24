@@ -295,25 +295,52 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
 
                         {/* Collection Selector */}
                         <div className="w-full">
-                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                            <label className="flex text-sm font-medium text-gray-400 mb-2 items-center gap-2">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                                </svg>
                                 Collection (optional)
                             </label>
-                            <select 
-                                value={selectedCollectionId}
-                                onChange={(e) => setSelectedCollectionId(e.target.value)}
-                                className="w-full bg-gray-800 text-white rounded-lg px-4 py-2 border border-gray-700 focus:border-gray-600 focus:outline-none"
-                            >
-                                <option value="">No Collection</option>
-                                {flattenedTree.map((node) => {
-                                    const indent = '  '.repeat(node.depth);
-                                    const prefix = node.depth > 0 ? `${indent}↳ ` : '';
-                                    return (
-                                        <option key={node._id} value={node._id}>
-                                            {prefix}{node.icon} {node.name}
-                                        </option>
-                                    );
-                                })}
-                            </select>
+                            <div className="relative group">
+                                <select 
+                                    value={selectedCollectionId}
+                                    onChange={(e) => setSelectedCollectionId(e.target.value)}
+                                    className="w-full bg-gray-900/50 text-white rounded-lg px-4 py-3 pr-10 border border-gray-800 hover:border-gray-700 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all cursor-pointer appearance-none backdrop-blur-sm"
+                                    style={{
+                                        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+                                        backgroundRepeat: 'no-repeat',
+                                        backgroundPosition: 'right 0.75rem center',
+                                        backgroundSize: '1.25rem'
+                                    }}
+                                >
+                                    <option value="" className="bg-gray-900 text-gray-400 py-2">
+                                        📂 No Collection
+                                    </option>
+                                    {flattenedTree.map((node) => {
+                                        const indent = '\u00A0\u00A0\u00A0'.repeat(node.depth); // Non-breaking spaces
+                                        const prefix = node.depth > 0 ? `${indent}↳ ` : '';
+                                        return (
+                                            <option 
+                                                key={node._id} 
+                                                value={node._id}
+                                                className="bg-gray-900 text-white py-2 hover:bg-gray-800"
+                                            >
+                                                {prefix}{node.icon} {node.name}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                                {/* Subtle glow effect on focus */}
+                                <div className="absolute inset-0 rounded-lg bg-purple-500/5 opacity-0 group-focus-within:opacity-100 transition-opacity pointer-events-none -z-10 blur-xl"></div>
+                            </div>
+                            {selectedCollectionId && (
+                                <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
+                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                                    </svg>
+                                    Content will be saved to selected collection
+                                </div>
+                            )}
                         </div>
 
                         {uploadMode === 'url' ? (

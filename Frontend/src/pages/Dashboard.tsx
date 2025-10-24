@@ -15,6 +15,7 @@ import { contentAPI, shareAPI, searchAPI, collectionAPI } from "../api"
 import { useLocation } from 'react-router-dom';
 import type { CollectionSummary } from "../types/collection"
 import { buildCollectionTree } from "../utils/collectionTree"
+import { SkeletonGrid, SkeletonCollectionGrid } from "../components/SkeletonLoader"
 
 export function Dashboard() {
   const location = useLocation();
@@ -467,30 +468,22 @@ export function Dashboard() {
 
           {/* Loading State */}
           {(loading || searchLoading) && (
-            <div className="flex items-center justify-center py-20">
-              <div className="text-center">
-                {/* Sophisticated multi-ring loader */}
-                <div className="relative w-20 h-20 mx-auto mb-6">
-                  {/* Outer ring */}
-                  <div className="absolute inset-0 border-2 border-gray-700 rounded-full"></div>
-                  <div className="absolute inset-0 border-2 border-transparent border-t-white border-r-white rounded-full animate-spin"></div>
-                  
-                  {/* Middle ring */}
-                  <div className="absolute inset-2 border-2 border-gray-800 rounded-full"></div>
-                  <div className="absolute inset-2 border-2 border-transparent border-t-gray-400 border-r-gray-400 rounded-full animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }}></div>
-                  
-                  {/* Inner ring */}
-                  <div className="absolute inset-4 border-2 border-gray-700 rounded-full"></div>
-                  <div className="absolute inset-4 border-2 border-transparent border-t-white rounded-full animate-spin" style={{ animationDuration: '1s' }}></div>
-                  
-                  {/* Center dot */}
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+            <div className="space-y-8">
+              {/* Skeleton for subcollections */}
+              {!isSearching && selectedCollectionId && (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="h-6 bg-gray-900 rounded w-48 animate-pulse"></div>
+                    <div className="h-4 bg-gray-900 rounded w-24 animate-pulse"></div>
                   </div>
+                  <SkeletonCollectionGrid count={4} />
                 </div>
-                <p className="text-gray-400 font-medium tracking-wide">
-                  {searchLoading ? 'Searching your brain...' : 'Loading your content...'}
-                </p>
+              )}
+              
+              {/* Skeleton for content cards */}
+              <div>
+                <div className="h-4 bg-gray-900 rounded w-32 mb-6 animate-pulse"></div>
+                <SkeletonGrid count={8} />
               </div>
             </div>
           )}

@@ -28,12 +28,12 @@ api.interceptors.response.use(
     (response) => response,
     (error: AxiosError) => {
         if (error.response?.status === 401) {
-            // Only redirect if not on signin/signup pages (to avoid clearing fields on wrong credentials)
+            // Only redirect if not on auth page (to avoid clearing fields on wrong credentials)
             const currentPath = window.location.pathname;
-            if (currentPath !== '/signin' && currentPath !== '/signup') {
-                // Unauthorized request - clear token and redirect to signin
+            if (currentPath !== '/auth') {
+                // Unauthorized request - clear token and redirect to auth
                 localStorage.removeItem('token');
-                window.location.href = '/signin';
+                window.location.href = '/auth?mode=signin';
             }
         }
         return Promise.reject(error);

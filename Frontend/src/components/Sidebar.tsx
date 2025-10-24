@@ -252,7 +252,7 @@ export const Sidebar = ({
     };
 
     return <div className="border-r border-gray-800 bg-black w-16 md:w-64 fixed top-0 left-0 h-screen flex flex-col">
-        <div className="text-2xl flex pl-4 mb-4 gap-4 pt-8 h-20 items-center text-white font-bold flex-shrink-0">
+        <div className="text-2xl flex justify-center gap-4 h-20 items-center text-white font-bold flex-shrink-0">
             <div className="cursor-pointer" onClick={() => navigate('/dashboard')}>
                 <Logo className="w-8 md:w-12"/>
             </div>
@@ -384,7 +384,10 @@ export const Sidebar = ({
                 onClose={() => setMobileCollectionsModalOpen(false)}
                 collections={collectionTree}
                 selectedCollectionId={selectedCollectionId || null}
-                onCollectionSelect={onCollectionSelect || (() => {})}
+                onCollectionSelect={onCollectionSelect || ((collectionId) => {
+                    // If no onCollectionSelect provided (e.g., on Profile page), navigate to Dashboard
+                    navigate('/dashboard', { state: { collectionId } });
+                })}
                 onCreateCollection={onCreateCollectionClick}
                 onDeleteCollection={onDeleteCollection}
             />,

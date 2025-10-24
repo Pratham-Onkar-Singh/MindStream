@@ -4,6 +4,7 @@ import { shareAPI, contentAPI } from "../api";
 import { ContentCard } from "../components/ContentCard";
 import { ViewContentModal } from "../components/ViewContentModal";
 import { Logo } from "../icons/Logo";
+import { SkeletonGrid } from "../components/SkeletonLoader";
 
 interface Content {
   _id: string;
@@ -40,7 +41,7 @@ export function Brain() {
     // Check if user is authenticated
     const token = localStorage.getItem("token");
     if (!token) {
-      navigate("/signin");
+      navigate("/auth?mode=signin");
       return;
     }
 
@@ -200,11 +201,11 @@ export function Brain() {
       <div className="max-w-7xl mx-auto px-6 py-10">
         {/* Loading State */}
         {loading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mx-auto mb-4"></div>
-              <p className="text-gray-400">Loading shared brain...</p>
+          <div>
+            <div className="mb-6 animate-pulse">
+              <div className="h-5 bg-gray-900 rounded w-64"></div>
             </div>
+            <SkeletonGrid count={6} />
           </div>
         )}
 

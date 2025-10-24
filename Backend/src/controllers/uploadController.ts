@@ -77,20 +77,7 @@ export const createSingleFile = async (req: Request, res: Response) => {
         // Use the secure_url directly - PDFs uploaded as 'image' type will be viewable
         let viewableUrl = result.secure_url;
 
-        const file = await File.create({
-            filename: req.file.originalname,
-            url: viewableUrl,
-            publicId: result.public_id,
-            resourceType: result.resource_type,
-            format: result.format,
-            bytes: result.bytes,
-            width: result.width,
-            height: result.height,
-        })
-
-        console.log('File record created:', file._id);
-
-        // Create content entry for the uploaded file
+        // Create content entry for the uploaded file first (to get contentId)
         const { title, description, collection } = req.body;
         const content = await Content.create({
             title: title || req.file.originalname,
@@ -103,6 +90,21 @@ export const createSingleFile = async (req: Request, res: Response) => {
         });
 
         console.log('Content record created:', content._id);
+
+        // Now create file record with contentId link
+        const file = await File.create({
+            filename: req.file.originalname,
+            url: viewableUrl,
+            publicId: result.public_id,
+            resourceType: result.resource_type, // Stores actual type: 'image', 'video', or 'raw'
+            format: result.format,
+            bytes: result.bytes,
+            width: result.width,
+            height: result.height,
+            contentId: content._id // Link file to content
+        })
+
+        console.log('File record created:', file._id);
 
         res.status(200).json({ 
             file,

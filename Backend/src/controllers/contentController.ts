@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
-import { Content } from "../models/index.js";
+import { Content, File } from "../models/index.js";
+import { cloudinary } from "../config/cloudinary.js";
 
 export const createContent = async (req: Request, res: Response) => {
     const { type, link, title, description, collection } = req.body;
@@ -60,6 +61,49 @@ export const deleteContent = async (req: Request, res: Response) => {
     }
 
     try {
+        // First, find the content to check if it has associated files
+        const content = await Content.findOne({ 
+            _id: contentId,
+            userId: req.userId 
+        });
+
+        if (!content) {
+            return res.status(404).json({ 
+                message: "Content not found" 
+            });
+        }
+
+        // If content is a file type, find and delete the associated file from Cloudinary
+        if (content.type === 'file') {
+            const file = await File.findOne({ contentId: contentId });
+            
+            console.log('File found for deletion:', {
+                fileExists: !!file,
+                publicId: file?.publicId,
+                resourceType: file?.resourceType
+            });
+            
+            if (file && file.publicId) {
+                try {
+                    // Delete file from Cloudinary
+                    const result = await cloudinary.uploader.destroy(file.publicId, { 
+                        resource_type: file.resourceType || 'auto' 
+                    });
+                    console.log(`Cloudinary deletion result for ${file.publicId}:`, result);
+                } catch (cloudinaryError) {
+                    console.error('Error deleting from Cloudinary:', cloudinaryError);
+                    // Continue with content deletion even if Cloudinary deletion fails
+                }
+                
+                // Delete file record from database
+                await File.deleteOne({ _id: file._id });
+                console.log(`Deleted file record from database: ${file._id}`);
+            } else {
+                console.log('No file record or publicId found for this content');
+            }
+        }
+
+        // Delete the content
         const result = await Content.deleteOne({ 
             _id: contentId,
             userId: req.userId 

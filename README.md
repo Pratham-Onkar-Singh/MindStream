@@ -15,9 +15,9 @@ MindStream is a full-stack web application that helps you capture, organize, and
 
 ### 🗂️ Collection System
 - **Nested Collections**: Create hierarchical folder structures for better organization
-- **Drag & Drop**: Easy content organization with intuitive interface
+- **Drag & Drop**: Easy content organization with intuitive interface (Upcoming feature)
 - **Collection Management**: Create, edit, and delete collections
-- **Smart Filtering**: Filter content by collection and type
+- **Smart Filtering**: Filter content by collection and type 
 - **Breadcrumb Navigation**: Easy navigation through nested collections
 - **Collapsible Trees**: Expand/collapse collection hierarchies
 
@@ -37,8 +37,8 @@ MindStream is a full-stack web application that helps you capture, organize, and
 - **Modern UI**: Clean, dark-themed interface built with Tailwind CSS
 - **Responsive Design**: Works seamlessly on desktop and mobile
 - **Real-time Updates**: Automatic collection and content count updates
-- **Custom Icons**: Emoji support for collections
-- **Color Coding**: Visual organization with custom colors
+- **Custom Icons**: Emoji support for collections (Upcoming feature)
+- **Color Coding**: Visual organization with custom colors (Upcoming feature)
 - **Empty States**: Helpful messages and CTAs when no content exists
 
 ### 👤 User Profile

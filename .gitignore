@@ -42,6 +42,7 @@ TEMP*.md
 DRAFT*.md
 WIP*.md
 .notes/
+text.txt
 
 # Security check scripts (personal use only)
 security-check.sh

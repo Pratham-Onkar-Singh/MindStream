@@ -32,7 +32,7 @@ export const signup = async (req: Request, res: Response) => {
         const brainLink = generateRandomHash(10);
 
         // Password will be automatically hashed by User model pre-save hook
-        await User.create({
+        const user = await User.create({
             name, 
             email, 
             username, 
@@ -40,9 +40,23 @@ export const signup = async (req: Request, res: Response) => {
             brainLink,
             isBrainPublic: false
         });
+
+        // Generate token for automatic login after signup
+        const token = jwt.sign(
+            { userId: user._id },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
         
         res.status(201).json({
-            message: "User created successfully!"
+            message: "User created successfully!",
+            token,
+            user: {
+                id: user._id,
+                name: user.name,
+                username: user.username,
+                email: user.email
+            }
         });
     } catch (error) {
         console.error("Signup error:", error);

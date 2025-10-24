@@ -7,7 +7,13 @@ const router = Router();
 
 // multer middleware to store files in RAM(buffer), so u can acces this file using req.file.buffer
 // without committing to memory
-const upload = multer({ storage: multer.memoryStorage() });
+// 10MB limit for Cloudinary free tier
+const upload = multer({ 
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB in bytes
+    }
+});
 
 router.post('/upload', authMiddleware, upload.single('file'), createSingleFile)
 

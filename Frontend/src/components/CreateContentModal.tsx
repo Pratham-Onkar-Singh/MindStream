@@ -109,9 +109,9 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Validate file size (50MB limit)
-            if (file.size > 50 * 1024 * 1024) {
-                setErrorMessage("File size must be less than 50MB");
+            // Validate file size (10MB limit for Cloudinary free tier)
+            if (file.size > 10 * 1024 * 1024) {
+                setErrorMessage("File size must be less than 10MB");
                 return;
             }
             setSelectedFile(file);
@@ -384,7 +384,7 @@ export const CreateContentModal = ({ open, onClose, onSubmit, editMode = false, 
                                                     Click to upload a file
                                                 </p>
                                                 <p className="text-gray-400 text-sm">
-                                                    PDF, DOC, Images, Videos, Audio (Max 50MB)
+                                                    PDF, DOC, Images, Videos, Audio (Max 10MB)
                                                 </p>
                                             </>
                                         )}
